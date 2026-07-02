@@ -415,6 +415,7 @@ export default function Home() {
     
     setProducts([]);
     setDeepCrawlingProgress(0);
+    setHtml(null);
     
     try {
       const result = await fetchAndRenderProxy(target!, currentQuery);

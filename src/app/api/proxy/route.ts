@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       : await chromium.executablePath();
 
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args: isLocal ? ['--no-sandbox', '--disable-setuid-sandbox'] : chromium.args,
       defaultViewport: { width: 1920, height: 1080 },
       executablePath: executablePath,
       headless: true,
@@ -40,7 +40,13 @@ export async function GET(request: Request) {
     // Spoof a realistic user agent
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
-    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 9000 });
+    try {
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      // Wait an extra second for React to hydrate styles if needed
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    } catch (e) {
+      console.log('Navigation timeout, proceeding with current DOM state');
+    }
     
     if (fetchImage === 'true') {
        const screenshot = await page.screenshot({ type: 'jpeg' });
