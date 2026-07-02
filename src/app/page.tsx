@@ -232,10 +232,27 @@ const scraperConfig = {
       const rating = doc.querySelector('.rating, .product-rating')?.textContent?.trim();
       const reviewsCount = parseInt(doc.querySelector('.reviews-count')?.textContent?.replace(/[^0-9]/g, '') || '0');
       const image = doc.querySelector('.product-image-container img')?.getAttribute('src');
-      return { price, rating, reviewsCount, image, tags: [] };
+      const description = doc.querySelector('.product-description')?.textContent?.trim() || '';
+      return { price, rating, reviewsCount, image, tags: [], description };
     }
   }
 };
+
+export interface AnalyzedProduct {
+  title: string;
+  price: string;
+  image: string;
+  link: string;
+  rating: string;
+  reviewsCount: number;
+  ordersCount: number;
+  tags: string[];
+  category: string;
+  demandStatus?: string;
+  repurchaseValue?: string;
+  reviewDeficit?: number;
+  description?: string;
+}
 
 export default function Home() {
   const [platform, setPlatform] = useState<Platform>('amazon');
@@ -246,6 +263,7 @@ export default function Home() {
   const [products, setProducts] = useState<AnalyzedProduct[]>([]);
   const [deepCrawlingProgress, setDeepCrawlingProgress] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<AnalyzedProduct | null>(null);
+  const [botBlocked, setBotBlocked] = useState<string | null>(null);
   const hasInitialized = useRef(false);
   
   const shadowHostRef = useRef<HTMLDivElement>(null);
@@ -256,6 +274,7 @@ export default function Home() {
     setPlatform(newPlatform);
     setQuery('');
     setProducts([]);
+    setBotBlocked(null);
     const baseUrl = scraperConfig[newPlatform].getBaseUrl();
     setCurrentScrapeUrl(baseUrl);
     await fetchAndRenderProxy(baseUrl);
@@ -263,14 +282,32 @@ export default function Home() {
 
   const fetchAndRenderProxy = async (target: string, currentQuery: string = '') => {
     setLoading(true);
+    setBotBlocked(null);
     setCurrentScrapeUrl(target);
     try {
       const res = await fetch(`/api/proxy?url=${encodeURIComponent(target)}`);
-      if (!res.ok) throw new Error('Failed to fetch proxy');
+      if (!res.ok && res.status !== 403 && res.status !== 503) throw new Error('Failed to fetch proxy');
       const rawHtml = await res.text();
       
       const parser = new DOMParser();
       const doc = parser.parseFromString(rawHtml, 'text/html');
+
+      // Bot Protection Detection
+      const htmlString = doc.documentElement.innerHTML;
+      let blockedReason = null;
+      if (htmlString.includes('awsWaf') || doc.querySelector('#challenge-container')) {
+        blockedReason = 'Amazon AWS WAF';
+      } else if (htmlString.includes('Are you a human?')) {
+        blockedReason = 'Flipkart Anti-Bot';
+      } else if (doc.title.includes('Just a moment...') || htmlString.includes('challenges.cloudflare.com')) {
+        blockedReason = 'Cloudflare';
+      }
+
+      if (blockedReason) {
+         setBotBlocked(blockedReason);
+         if (shadowRootRef.current) shadowRootRef.current.innerHTML = '';
+         return null;
+      }
 
       // 1. Run extraction FIRST while scripts (containing JSON state) still exist
       let rawProducts: any[] = [];
@@ -304,7 +341,19 @@ export default function Home() {
         const originUrl = new URL(target);
         const htmlWithBase = cleanHtml.replace('<head>', `<head><base href="${originUrl.origin}">`);
         
-        shadowRootRef.current.innerHTML = htmlWithBase;
+        if (platform === 'myntra' || platform === 'zivame') {
+           // Provide visual fallback for SPAs where JS is stripped
+           shadowRootRef.current.innerHTML = `
+             <div style="font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f8f9fa; color: #333; text-align: center; padding: 2rem;">
+                <h1 style="font-size: 2rem; margin-bottom: 1rem;">${platform.toUpperCase()} Web App</h1>
+                <p style="font-size: 1.2rem; color: #666;">Visual preview is disabled because this is a Single-Page Application (React) and scripts have been safely stripped.</p>
+                <p style="font-size: 1.1rem; margin-top: 1rem; color: #10b981; font-weight: bold;">But don't worry, the Scraper Engine in the background is fully extracting the JSON data! 🚀</p>
+             </div>
+           `;
+        } else {
+           shadowRootRef.current.innerHTML = htmlWithBase;
+        }
+        
         shadowRootRef.current.addEventListener('click', handleShadowClick);
       }
       return { doc, rawProducts };
@@ -467,6 +516,13 @@ export default function Home() {
               
               <div className="h-px w-full bg-white/5" />
               
+              {selectedProduct.description && (
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-sm font-semibold text-white/40 uppercase tracking-widest">Product Details</h3>
+                  <p className="text-sm text-white/70 leading-relaxed whitespace-pre-line">{selectedProduct.description}</p>
+                </div>
+              )}
+              
               <div className="flex flex-col gap-4">
                 <h3 className="text-sm font-semibold text-white/40 uppercase tracking-widest">AI Insights & Forecasting</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -535,6 +591,15 @@ export default function Home() {
             </div>
           </div>
           
+          {botBlocked && (
+            <div className="w-full bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-3">
+               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+               <p className="text-red-400 text-sm font-medium flex-1">
+                 <strong className="text-red-300">Bot Detection Triggered ({botBlocked}):</strong> The marketplace has temporarily blocked this IP address from scraping. Wait a few minutes before trying again, or use a Residential Proxy.
+               </p>
+            </div>
+          )}
+
           <form onSubmit={handleSearch} className="relative flex items-center w-full max-w-4xl">
             <input 
               type="text" 
