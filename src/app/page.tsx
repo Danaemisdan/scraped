@@ -39,8 +39,7 @@ const scraperConfig = {
       const items = Array.from(doc.querySelectorAll('div[data-asin]')).filter(el => el.getAttribute('data-asin') !== '');
       return items.map(item => {
         const titleEl = item.querySelector('h2') || item.querySelector('.a-size-medium') || item.querySelector('.a-text-normal');
-        let linkEl = item.querySelector('a.a-link-normal[href*="/dp/"]') || item.querySelector('h2 a');
-        if (!linkEl) linkEl = item.querySelector('img')?.closest('a');
+        const linkEl = item.querySelector('a.a-link-normal[href*="/dp/"]') || item.querySelector('h2 a') || item.querySelector('img')?.closest('a');
         
         const priceEl = item.querySelector('.a-price-whole');
         const fallbackPrice = priceEl ? `₹${priceEl.textContent?.trim()}` : 'Fetching...';
@@ -65,7 +64,8 @@ const scraperConfig = {
       const reviewsCount = parseInt(reviewsText?.replace(/[^0-9]/g, '') || '0');
       const image = doc.querySelector('#landingImage')?.getAttribute('src');
       const tags = Array.from(doc.querySelectorAll('.badge-wrapper, .a-badge-text')).map(el => el.textContent?.trim() || '').filter(Boolean);
-      return { price, rating: rating ? (rating as any).getAttribute?.('title') || rating : 'N/A', reviewsCount, image, tags };
+      const description = doc.querySelector('.product-description')?.textContent?.trim() || '';
+      return { price, rating: rating ? (rating as any).getAttribute?.('title') || rating : 'N/A', reviewsCount, image, tags: [], description };
     }
   },
   flipkart: {
@@ -237,22 +237,6 @@ const scraperConfig = {
     }
   }
 };
-
-export interface AnalyzedProduct {
-  title: string;
-  price: string;
-  image: string;
-  link: string;
-  rating: string;
-  reviewsCount: number;
-  ordersCount: number;
-  tags: string[];
-  category: string;
-  demandStatus?: string;
-  repurchaseValue?: string;
-  reviewDeficit?: number;
-  description?: string;
-}
 
 export default function Home() {
   const [platform, setPlatform] = useState<Platform>('amazon');

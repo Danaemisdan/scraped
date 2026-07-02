@@ -8,6 +8,7 @@ export interface ProductData {
   ordersCount: number;
   tags: string[];
   category: string;
+  description?: string;
 }
 
 export interface AnalyzedProduct extends ProductData {
