@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { gotScraping } from 'got-scraping';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -10,7 +11,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { gotScraping } = await import('got-scraping');
     
     if (fetchImage === 'true') {
       const response = await gotScraping(targetUrl, { responseType: 'buffer' });
@@ -37,8 +37,8 @@ export async function GET(request: Request) {
         'Access-Control-Allow-Origin': '*'
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Proxy Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch the URL' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to fetch the URL' }, { status: 500 });
   }
 }

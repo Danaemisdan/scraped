@@ -270,7 +270,15 @@ export default function Home() {
     setCurrentScrapeUrl(target);
     try {
       const res = await fetch(`/api/proxy?url=${encodeURIComponent(target)}`);
-      if (!res.ok && res.status !== 403 && res.status !== 503) throw new Error('Failed to fetch proxy');
+      
+      if (!res.ok && res.status !== 403 && res.status !== 503) {
+         try {
+           const errData = await res.json();
+           throw new Error(errData.error || 'Failed to fetch proxy');
+         } catch (e: any) {
+           throw new Error(e.message || 'Failed to fetch proxy');
+         }
+      }
       const rawHtml = await res.text();
       
       const parser = new DOMParser();
@@ -421,9 +429,9 @@ export default function Home() {
           runParallelDeepCrawler(rawProducts, platform);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Error fetching data.');
+      alert(`Error fetching data: ${err.message}`);
     }
   };
   
