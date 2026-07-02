@@ -436,12 +436,12 @@ export default function Home() {
       
       let href = anchor.getAttribute('href')!;
       if (href.startsWith('/')) {
-        const currentUrlObj = new URL(url.startsWith('http') ? url : scraperConfig[platform].buildUrl(url));
+        const currentUrlObj = new URL(currentScrapeUrl.startsWith('http') ? currentScrapeUrl : scraperConfig[platform].buildUrl(query));
         href = `${currentUrlObj.origin}${href}`;
       }
       
       if (href.startsWith('http')) {
-        setUrl(href);
+        setCurrentScrapeUrl(href);
         const event = new CustomEvent('scrape-url', { detail: { url: href } });
         window.dispatchEvent(event);
       }
