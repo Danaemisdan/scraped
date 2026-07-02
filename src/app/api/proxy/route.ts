@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { gotScraping } from 'got-scraping';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -11,24 +10,54 @@ export async function GET(request: Request) {
   }
 
   try {
+    const { addExtra } = await import('puppeteer-extra');
+    const puppeteerCore = (await import('puppeteer-core')).default;
+    // @ts-ignore
+    const puppeteer = addExtra(puppeteerCore);
+    const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default;
+    const chromium = (await import('@sparticuz/chromium')).default;
+    
+    puppeteer.use(StealthPlugin());
+
+    const isLocal = process.env.NODE_ENV === 'development';
+    
+    // In local dev, you must have Chrome installed at this path or similar.
+    // In Vercel, sparticuz provides the Chromium binary natively.
+    const executablePath = isLocal 
+      ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      : await chromium.executablePath();
+
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: { width: 1920, height: 1080 },
+      executablePath: executablePath,
+      headless: true,
+    });
+
+    const page = await browser.newPage();
+    await page.setBypassCSP(true);
+    
+    // Spoof a realistic user agent
+    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 9000 });
     
     if (fetchImage === 'true') {
-      const response = await gotScraping(targetUrl, { responseType: 'buffer' });
-      const contentType = response.headers['content-type'] || 'image/jpeg';
-      const base64 = `data:${contentType};base64,${response.body.toString('base64')}`;
-      return NextResponse.json({ base64 }, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' }});
+       const screenshot = await page.screenshot({ type: 'jpeg' });
+       await browser.close();
+       const base64 = `data:image/jpeg;base64,${Buffer.from(screenshot).toString('base64')}`;
+       return NextResponse.json({ base64 }, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' }});
     }
 
-    const response = await gotScraping(targetUrl);
-    let html = response.body;
-    
-    // Inject <base> tag as a fallback
+    let html = await page.content();
+    await browser.close();
+
     const originUrl = new URL(targetUrl);
     html = html.replace('<head>', `<head><base href="${originUrl.origin}">`);
-
-    // Manually rewrite stylesheet links to absolute URLs to fix Flipkart/Zivame CSS issues
-    html = html.replace(/href="(\/[^"]+\.css[^"]*)"/g, `href="${originUrl.origin}$1"`);
-    html = html.replace(/src="(\/[^"]+)"/g, `src="${originUrl.origin}$1"`);
+    
+    // Rewrite protocol relative URLs to absolute
+    html = html.replace(/href="\/\//g, 'href="https://');
+    html = html.replace(/src="\/\//g, 'src="https://');
 
     return new NextResponse(html, {
       status: 200,
