@@ -10,23 +10,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await fetch(targetUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9'
-      },
-    });
-
+    const { gotScraping } = await import('got-scraping');
+    
     if (fetchImage === 'true') {
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const contentType = response.headers.get('content-type') || 'image/jpeg';
-      const base64 = `data:${contentType};base64,${buffer.toString('base64')}`;
+      const response = await gotScraping(targetUrl, { responseType: 'buffer' });
+      const contentType = response.headers['content-type'] || 'image/jpeg';
+      const base64 = `data:${contentType};base64,${response.body.toString('base64')}`;
       return NextResponse.json({ base64 }, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' }});
     }
 
-    let html = await response.text();
+    const response = await gotScraping(targetUrl);
+    let html = response.body;
     
     // Inject <base> tag as a fallback
     const originUrl = new URL(targetUrl);
