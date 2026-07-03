@@ -33,9 +33,13 @@ export async function GET(request: Request) {
     const chromium = (await import('@sparticuz/chromium')).default;
     
     // Force Vercel NFT to trace these dynamic sub-dependencies safely
+    // @ts-ignore
     await import('is-plain-object');
+    // @ts-ignore
     await import('clone-deep');
+    // @ts-ignore
     await import('merge-deep');
+    // @ts-ignore
     await import('kind-of');
     
     puppeteer.use(StealthPlugin());
