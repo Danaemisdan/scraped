@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import 'is-plain-object';
+import 'clone-deep';
+import 'merge-deep';
 
 export const maxDuration = 60;
 
