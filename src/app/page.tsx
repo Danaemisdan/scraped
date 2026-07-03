@@ -38,7 +38,7 @@ const scraperConfig = {
     scrapeSearch: (doc: Document, query: string) => {
       const items = Array.from(doc.querySelectorAll('div[data-asin]')).filter(el => el.getAttribute('data-asin') !== '');
       return items.map(item => {
-        const titleEl = item.querySelector('h2') || item.querySelector('.a-size-medium') || item.querySelector('.a-text-normal');
+        const titleEl = item.querySelector('h2 span.a-text-normal') || item.querySelector('h2 .a-text-normal') || item.querySelector('h2') || item.querySelector('span.a-size-medium.a-text-normal, span.a-size-base-plus.a-text-normal');
         const linkEl = item.querySelector('a.a-link-normal[href*="/dp/"]') || item.querySelector('h2 a') || item.querySelector('img')?.closest('a');
         
         const priceEl = item.querySelector('.a-price-whole');

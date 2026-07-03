@@ -70,8 +70,8 @@ export async function GET(request: Request) {
     
     try {
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
-      // Wait an extra second for React to hydrate styles if needed
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait an extra half second for React to hydrate styles if needed
+      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (e) {
       console.log('Navigation timeout, proceeding with current DOM state');
     }
