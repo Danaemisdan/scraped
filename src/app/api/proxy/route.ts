@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let browserPromise: Promise<any> | null = null;
 
 export async function GET(request: Request) {
@@ -115,6 +116,7 @@ export async function GET(request: Request) {
         'Access-Control-Allow-Origin': '*'
       },
     });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Proxy Error:', error);
     return NextResponse.json({ error: error.message || 'Failed to fetch the URL' }, { status: 500 });

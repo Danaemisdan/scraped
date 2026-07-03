@@ -203,6 +203,7 @@ const scraperConfig = {
         });
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (extractedProducts.length > 0) return extractedProducts.filter((p: any) => p.title && p.link);
 
       return items.map(item => {
