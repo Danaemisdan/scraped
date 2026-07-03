@@ -25,8 +25,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const puppeteer = (await import('puppeteer-core')).default;
+    const { addExtra } = await import('puppeteer-extra');
+    const puppeteerCore = (await import('puppeteer-core')).default;
+    // @ts-ignore
+    const puppeteer = addExtra(puppeteerCore);
+    const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default;
     const chromium = (await import('@sparticuz/chromium')).default;
+    
+    puppeteer.use(StealthPlugin());
 
     const isLocal = process.env.NODE_ENV === 'development';
     
@@ -45,25 +51,6 @@ export async function GET(request: Request) {
 
     const page = await browser.newPage();
     await page.setBypassCSP(true);
-    
-    // Manual Stealth Evasions (Replacing StealthPlugin)
-    await page.evaluateOnNewDocument(() => {
-      // Pass webdriver check
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      
-      // Mock chrome object
-      // @ts-ignore
-      window.chrome = { runtime: {} };
-      
-      // Overwrite permissions
-      const originalQuery = window.navigator.permissions.query;
-      // @ts-ignore
-      window.navigator.permissions.query = (parameters) => (
-        parameters.name === 'notifications' 
-          ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
-          : originalQuery(parameters)
-      );
-    });
     
     // Spoof a realistic user agent
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
