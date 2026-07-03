@@ -41,21 +41,23 @@ export async function GET(request: Request) {
     const isLocal = process.env.NODE_ENV === 'development';
     
     if (!browserPromise) {
-      // @ts-ignore
-      const executablePath = isLocal 
-        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' 
-        : await chromium.executablePath();
+      browserPromise = (async () => {
+        // @ts-ignore
+        const executablePath = isLocal 
+          ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' 
+          : await chromium.executablePath();
 
-      browserPromise = puppeteer.launch({
-        // @ts-ignore
-        args: isLocal ? puppeteerCore.defaultArgs() : [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
-        // @ts-ignore
-        defaultViewport: chromium.defaultViewport,
-        executablePath,
-        // @ts-ignore
-        headless: chromium.headless,
-        ignoreHTTPSErrors: true,
-      }).catch(err => {
+        return puppeteer.launch({
+          // @ts-ignore
+          args: isLocal ? puppeteerCore.defaultArgs() : [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+          // @ts-ignore
+          defaultViewport: chromium.defaultViewport,
+          executablePath,
+          // @ts-ignore
+          headless: chromium.headless,
+          ignoreHTTPSErrors: true,
+        });
+      })().catch(err => {
         browserPromise = null;
         throw err;
       });
@@ -64,21 +66,23 @@ export async function GET(request: Request) {
     let browser = await browserPromise;
     
     if (!browser || !browser.connected) {
-      // @ts-ignore
-      const executablePath = isLocal 
-        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' 
-        : await chromium.executablePath();
-        
-      browserPromise = puppeteer.launch({
+      browserPromise = (async () => {
         // @ts-ignore
-        args: isLocal ? puppeteerCore.defaultArgs() : [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
-        // @ts-ignore
-        defaultViewport: chromium.defaultViewport,
-        executablePath,
-        // @ts-ignore
-        headless: chromium.headless,
-        ignoreHTTPSErrors: true,
-      }).catch(err => {
+        const executablePath = isLocal 
+          ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' 
+          : await chromium.executablePath();
+          
+        return puppeteer.launch({
+          // @ts-ignore
+          args: isLocal ? puppeteerCore.defaultArgs() : [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+          // @ts-ignore
+          defaultViewport: chromium.defaultViewport,
+          executablePath,
+          // @ts-ignore
+          headless: chromium.headless,
+          ignoreHTTPSErrors: true,
+        });
+      })().catch(err => {
         browserPromise = null;
         throw err;
       });

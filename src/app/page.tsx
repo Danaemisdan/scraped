@@ -303,6 +303,10 @@ export default function Home() {
       let blockedReason = null;
       if (htmlString.includes('awsWaf') || doc.querySelector('#challenge-container')) {
         blockedReason = 'Amazon AWS WAF';
+      } else if (target.includes('myntra.com')) {
+         // Myntra-specific logic
+      } else if (target.includes('zivame.com')) {
+         // Zivame-specific logic
       } else if (htmlString.includes('Are you a human?')) {
         blockedReason = 'Flipkart Anti-Bot';
       } else if (doc.title.includes('Just a moment...') || htmlString.includes('challenges.cloudflare.com')) {
