@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const targetUrl = searchParams.get('url');
@@ -7,6 +9,19 @@ export async function GET(request: Request) {
 
   if (!targetUrl) {
     return NextResponse.json({ error: 'URL parameter is required' }, { status: 400 });
+  }
+
+  if (fetchImage === 'true') {
+    try {
+      const res = await fetch(targetUrl);
+      const arrayBuffer = await res.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const contentType = res.headers.get('content-type') || 'image/jpeg';
+      const base64 = `data:${contentType};base64,${buffer.toString('base64')}`;
+      return NextResponse.json({ base64 }, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' }});
+    } catch (e) {
+      return NextResponse.json({ base64: null }, { status: 500 });
+    }
   }
 
   try {
@@ -48,13 +63,6 @@ export async function GET(request: Request) {
       console.log('Navigation timeout, proceeding with current DOM state');
     }
     
-    if (fetchImage === 'true') {
-       const screenshot = await page.screenshot({ type: 'jpeg' });
-       await browser.close();
-       const base64 = `data:image/jpeg;base64,${Buffer.from(screenshot).toString('base64')}`;
-       return NextResponse.json({ base64 }, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' }});
-    }
-
     let html = await page.content();
     await browser.close();
 
