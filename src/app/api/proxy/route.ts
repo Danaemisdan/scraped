@@ -32,6 +32,12 @@ export async function GET(request: Request) {
     const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default;
     const chromium = (await import('@sparticuz/chromium')).default;
     
+    // Force Vercel NFT to trace these dynamic sub-dependencies safely
+    await import('is-plain-object');
+    await import('clone-deep');
+    await import('merge-deep');
+    await import('kind-of');
+    
     puppeteer.use(StealthPlugin());
 
     const isLocal = process.env.NODE_ENV === 'development';
