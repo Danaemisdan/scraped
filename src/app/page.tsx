@@ -206,18 +206,31 @@ const scraperConfig = {
       if (extractedProducts.length > 0) return extractedProducts.filter((p: any) => p.title && p.link);
 
       return items.map(item => {
-        const titleEl = item.querySelector('.prod-name, .product-title, .title');
+        // Try multiple selectors for Zivame's product title
+        const titleEl = item.querySelector('.prod-name, .product-title, .title, .product-brand, h2, h3, .name');
         const linkEl = item.querySelector('a');
         let href = linkEl?.getAttribute('href') || '';
         if (href && !href.startsWith('http')) href = `https://www.zivame.com${href}`;
 
-        const priceEl = item.querySelector('.final-price, .discount-price, .price');
+        const priceEl = item.querySelector('.final-price, .discount-price, .price, .rupee-format');
         const fallbackPrice = priceEl ? priceEl.textContent?.trim() : 'Fetching...';
+        
+        let titleText = titleEl?.textContent?.trim() || '';
+        // If the title is an offer like "Buy 2 Get 1 Free", try to find a better title
+        if (titleText.toLowerCase().includes('offer') || titleText.toLowerCase().includes('buy') || titleText.includes('%')) {
+            const altTitleEl = Array.from(item.querySelectorAll('*')).find(el => {
+                const text = el.textContent?.trim() || '';
+                return text.length > 10 && !text.includes('₹') && !text.toLowerCase().includes('offer') && !text.toLowerCase().includes('buy');
+            });
+            if (altTitleEl) {
+                titleText = altTitleEl.textContent?.trim() || titleText;
+            }
+        }
 
         return {
-          title: titleEl?.textContent?.trim() || '',
+          title: titleText,
           price: fallbackPrice,
-          image: item.querySelector('img.product-image, img.image')?.getAttribute('src') || item.querySelector('img')?.getAttribute('data-src') || '',
+          image: item.querySelector('img.product-image, img.image, img.lazyload')?.getAttribute('src') || item.querySelector('img')?.getAttribute('data-src') || item.querySelector('img')?.getAttribute('src') || '',
           link: href,
           rating: 'N/A',
           reviewsCount: 0,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-
-import { stealthScript } from './stealth';
+// @ts-ignore
+import stealthBundle from './stealth-bundle.js';
 
 export const maxDuration = 60;
 
@@ -27,30 +27,39 @@ export async function GET(request: Request) {
   }
 
   try {
-    const puppeteer = (await import('puppeteer-core')).default;
+    const { addExtra } = await import('puppeteer-extra');
+    const puppeteerCore = (await import('puppeteer-core')).default;
+    // @ts-ignore
+    const puppeteer = addExtra(puppeteerCore);
+    const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default;
+    puppeteer.use(StealthPlugin());
+
     const chromium = (await import('@sparticuz/chromium')).default;
+    chromium.setGraphicsMode = false;
 
     const isLocal = process.env.NODE_ENV === 'development';
     
-    // In local dev, you must have Chrome installed at this path or similar.
-    // In Vercel, sparticuz provides the Chromium binary natively.
-    const executablePath = isLocal 
-      ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-      : await chromium.executablePath();
-
+    // In local dev, you must have Chrome installed or use a local executable path
+    // For Vercel, we use sparticuz/chromium
     const browser = await puppeteer.launch({
-      args: isLocal ? ['--no-sandbox', '--disable-setuid-sandbox'] : chromium.args,
-      defaultViewport: { width: 1920, height: 1080 },
-      executablePath: executablePath,
-      headless: true,
+      // @ts-ignore
+      args: isLocal ? puppeteerCore.defaultArgs() : [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+      // @ts-ignore
+      defaultViewport: chromium.defaultViewport,
+      executablePath: isLocal 
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' 
+        : await chromium.executablePath(),
+      // @ts-ignore
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
 
     const page = await browser.newPage();
-    await page.setBypassCSP(true);
-    await page.evaluateOnNewDocument(stealthScript);
     
-    // Spoof a realistic user agent
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    // Set a realistic viewport and user agent
+    await page.setViewport({ width: 1280, height: 800 });
+    // Let stealth plugin handle user agent, or set a realistic one if needed
+    // await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
     try {
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
