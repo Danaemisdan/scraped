@@ -54,12 +54,15 @@ export async function GET(request: Request) {
         // @ts-ignore
         headless: chromium.headless,
         ignoreHTTPSErrors: true,
+      }).catch(err => {
+        browserPromise = null;
+        throw err;
       });
     }
 
     let browser = await browserPromise;
     
-    if (!browser.isConnected()) {
+    if (!browser || !browser.connected) {
       // @ts-ignore
       const executablePath = isLocal 
         ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' 
@@ -74,6 +77,9 @@ export async function GET(request: Request) {
         // @ts-ignore
         headless: chromium.headless,
         ignoreHTTPSErrors: true,
+      }).catch(err => {
+        browserPromise = null;
+        throw err;
       });
       browser = await browserPromise;
     }
