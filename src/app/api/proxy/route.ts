@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+import { stealthScript } from './stealth';
+
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
@@ -25,14 +27,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { addExtra } = await import('puppeteer-extra');
-    const puppeteerCore = (await import('puppeteer-core')).default;
-    // @ts-ignore
-    const puppeteer = addExtra(puppeteerCore);
-    const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default;
+    const puppeteer = (await import('puppeteer-core')).default;
     const chromium = (await import('@sparticuz/chromium')).default;
-    
-    puppeteer.use(StealthPlugin());
 
     const isLocal = process.env.NODE_ENV === 'development';
     
@@ -51,6 +47,7 @@ export async function GET(request: Request) {
 
     const page = await browser.newPage();
     await page.setBypassCSP(true);
+    await page.evaluateOnNewDocument(stealthScript);
     
     // Spoof a realistic user agent
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
