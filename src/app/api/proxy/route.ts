@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-// @ts-ignore
-import stealthBundle from './stealth-bundle.js';
 
 export const maxDuration = 60;
+
+let browserPromise: Promise<any> | null = null;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -39,30 +39,53 @@ export async function GET(request: Request) {
 
     const isLocal = process.env.NODE_ENV === 'development';
     
-    // In local dev, you must have Chrome installed or use a local executable path
-    // For Vercel, we use sparticuz/chromium
-    const browser = await puppeteer.launch({
+    if (!browserPromise) {
       // @ts-ignore
-      args: isLocal ? puppeteerCore.defaultArgs() : [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
-      // @ts-ignore
-      defaultViewport: chromium.defaultViewport,
-      executablePath: isLocal 
+      const executablePath = isLocal 
         ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' 
-        : await chromium.executablePath(),
+        : await chromium.executablePath();
+
+      browserPromise = puppeteer.launch({
+        // @ts-ignore
+        args: isLocal ? puppeteerCore.defaultArgs() : [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+        // @ts-ignore
+        defaultViewport: chromium.defaultViewport,
+        executablePath,
+        // @ts-ignore
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
+      });
+    }
+
+    let browser = await browserPromise;
+    
+    if (!browser.isConnected()) {
       // @ts-ignore
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
-    });
+      const executablePath = isLocal 
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' 
+        : await chromium.executablePath();
+        
+      browserPromise = puppeteer.launch({
+        // @ts-ignore
+        args: isLocal ? puppeteerCore.defaultArgs() : [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+        // @ts-ignore
+        defaultViewport: chromium.defaultViewport,
+        executablePath,
+        // @ts-ignore
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
+      });
+      browser = await browserPromise;
+    }
 
     const page = await browser.newPage();
     
     // Set a realistic viewport and user agent
     await page.setViewport({ width: 1280, height: 800 });
-    // Let stealth plugin handle user agent, or set a realistic one if needed
-    // await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
     try {
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      
       // Wait an extra half second for React to hydrate styles if needed
       await new Promise(resolve => setTimeout(resolve, 500));
     } catch (e) {
@@ -70,7 +93,7 @@ export async function GET(request: Request) {
     }
     
     let html = await page.content();
-    await browser.close();
+    await page.close();
 
     const originUrl = new URL(targetUrl);
     html = html.replace('<head>', `<head><base href="${originUrl.origin}">`);
